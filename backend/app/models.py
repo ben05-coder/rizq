@@ -21,6 +21,18 @@ class DigestData(BaseModel):
     questions: List[str]
 
 
+class Flashcard(BaseModel):
+    """Single flashcard"""
+    front: str
+    back: str
+
+
+class FlashcardsData(BaseModel):
+    """Collection of flashcards"""
+    flashcards: List[Flashcard]
+    count: int
+
+
 class MemoryMetadata(BaseModel):
     """Memory metadata"""
     created_at: str
@@ -33,6 +45,7 @@ class IngestResponseData(BaseModel):
     memory_id: str
     transcript: TranscriptData
     digest: DigestData
+    flashcards: FlashcardsData
     metadata: MemoryMetadata
 
 

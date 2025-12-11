@@ -107,3 +107,36 @@ def extract_smartnotes(smartnotes_text: str) -> Dict[str, Any]:
         "quizzes": parsed.get("quizzes", []),
         "eli12": parsed.get("eli12", "")
     }
+
+
+def extract_flashcards(flashcard_text: str) -> list:
+    """
+    Extracts flashcards from GPT response.
+
+    Expected format:
+    {
+        "flashcards": [
+            {"front": "Question or term", "back": "Answer or definition"},
+            ...
+        ]
+    }
+
+    Args:
+        flashcard_text: Raw flashcard text from GPT
+
+    Returns:
+        List of flashcard dictionaries
+    """
+    parsed = parse_gpt_json(flashcard_text)
+    flashcards = parsed.get("flashcards", [])
+
+    # Validate flashcard format
+    valid_flashcards = []
+    for card in flashcards:
+        if isinstance(card, dict) and "front" in card and "back" in card:
+            valid_flashcards.append({
+                "front": str(card["front"]),
+                "back": str(card["back"])
+            })
+
+    return valid_flashcards

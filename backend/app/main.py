@@ -11,9 +11,10 @@ import os
 load_dotenv()
 
 from app.db import collection, embedding_fn
-from app.utils import parse_gpt_json, extract_structured_digest, extract_smartnotes
+from app.utils import parse_gpt_json, extract_structured_digest, extract_smartnotes, extract_flashcards
 from app.models import (
     IngestResponse, IngestResponseData, TranscriptData, DigestData, MemoryMetadata,
+    Flashcard, FlashcardsData,
     SearchResponse, SearchResponseData, SearchSource,
     ChatResponse, ChatResponseData,
     SmartNotesResponse, SmartNotesData,
@@ -171,10 +172,38 @@ async def ingest(file: UploadFile = File(...)):
         # Parse the digest JSON
         parsed_digest = extract_structured_digest(digest_text)
 
+        # 3. Generate flashcards
+        flashcard_prompt = f"""
+        Create study flashcards from this text. Return ONLY a valid JSON object with no markdown formatting.
+
+        TEXT:
+        {text}
+
+        Generate 8-12 flashcards that help someone study and remember the key concepts.
+        Make them concise and test-worthy.
+
+        Return JSON with exactly this format:
+        {{
+            "flashcards": [
+                {{"front": "Question or term", "back": "Answer or definition"}},
+                {{"front": "What is...", "back": "The answer is..."}},
+                ...
+            ]
+        }}
+        """
+
+        flashcard_response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": flashcard_prompt}]
+        )
+
+        flashcard_text = flashcard_response.choices[0].message.content
+        flashcard_list = extract_flashcards(flashcard_text)
+
         # Generate unique ID for this memory
         memory_id = str(uuid.uuid4())
 
-        # 3. Store in Chroma with metadata
+        # 4. Store in Chroma with metadata
         embeddings = embedding_fn([text])
         collection.add(
             ids=[memory_id],
@@ -188,7 +217,7 @@ async def ingest(file: UploadFile = File(...)):
             }]
         )
 
-        # 4. Return structured response
+        # 5. Return structured response
         return IngestResponse(
             success=True,
             data=IngestResponseData(
@@ -204,6 +233,10 @@ async def ingest(file: UploadFile = File(...)):
                     insights=parsed_digest.get("insights", []),
                     action_items=parsed_digest.get("action_items", []),
                     questions=parsed_digest.get("questions", [])
+                ),
+                flashcards=FlashcardsData(
+                    flashcards=[Flashcard(**card) for card in flashcard_list],
+                    count=len(flashcard_list)
                 ),
                 metadata=MemoryMetadata(
                     created_at=datetime.now().isoformat(),

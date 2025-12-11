@@ -3,6 +3,7 @@ import "./index.css";
 import ResultCard from "./components/ResultCard";
 import TranscriptCard from "./components/TranscriptCard";
 import SearchResults from "./components/SearchResults";
+import FlashcardGrid from "./components/FlashcardGrid";
 
 function App() {
   const [file, setFile] = useState(null);
@@ -151,6 +152,7 @@ function App() {
             metadata={ingestData.metadata}
           />
           <ResultCard digest={ingestData.digest} />
+          <FlashcardGrid flashcardsData={ingestData.flashcards} />
         </>
       )}
 
