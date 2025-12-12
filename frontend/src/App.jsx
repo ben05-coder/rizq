@@ -24,10 +24,17 @@ function App() {
       const formData = new FormData();
       formData.append("file", file);
 
+      // Increased timeout for long audio files (up to 20 minutes)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 20 * 60 * 1000); // 20 minutes
+
       const res = await fetch("http://127.0.0.1:8000/ingest", {
         method: "POST",
-        body: formData
+        body: formData,
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
 
       if (!res.ok) {
         throw new Error(`Upload failed: ${res.statusText}`);
@@ -140,7 +147,18 @@ function App() {
       {/* Loading State */}
       {loading && (
         <div className="loading">
-          <div style={{ fontSize: "18px" }}>Processing...</div>
+          <div style={{ fontSize: "18px", marginBottom: "12px" }}>⏳ Processing your audio...</div>
+          <div style={{ fontSize: "14px", color: "#666", maxWidth: "500px", margin: "0 auto", lineHeight: "1.6" }}>
+            {file && file.size > 5000000 && (
+              <>
+                <strong>Large file detected!</strong> This may take 10-15 minutes for long lectures.
+                <br />Please keep this tab open.
+              </>
+            )}
+            {(!file || file.size <= 5000000) && (
+              <>This usually takes 30-60 seconds...</>
+            )}
+          </div>
         </div>
       )}
 

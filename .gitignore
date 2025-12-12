@@ -41,3 +41,9 @@ build/
 .pytest_cache/
 .coverage
 htmlcov/
+
+# Audio test files (too large for git)
+*.m4a
+*.mp3
+*.wav
+*.mp4

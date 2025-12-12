@@ -138,10 +138,37 @@ async def ingest(file: UploadFile = File(...)):
     try:
         audio_bytes = await file.read()
 
-        # 1. Transcribe
+        # Check file size and compress if needed (Whisper has 25MB limit)
+        MAX_SIZE = 24 * 1024 * 1024  # 24MB to be safe
+        filename = file.filename or "audio.m4a"
+
+        if len(audio_bytes) > MAX_SIZE:
+            from pydub import AudioSegment
+            import io
+
+            original_size = len(audio_bytes)
+
+            # Load audio
+            audio = AudioSegment.from_file(io.BytesIO(audio_bytes))
+
+            # Compress: reduce to mono, lower bitrate
+            audio = audio.set_channels(1)  # Mono
+            audio = audio.set_frame_rate(16000)  # Lower sample rate (16kHz is good for speech)
+
+            # Export to compressed format
+            compressed_buffer = io.BytesIO()
+            audio.export(compressed_buffer, format="mp3", bitrate="32k")  # Very low bitrate for speech
+            compressed_buffer.seek(0)
+            audio_bytes = compressed_buffer.read()
+            filename = "compressed_audio.mp3"
+
+            print(f"Compressed audio from {original_size/(1024*1024):.1f}MB to {len(audio_bytes)/(1024*1024):.1f}MB", flush=True)
+
+        # 1. Transcribe (force English to handle accented speakers)
         transcription = client.audio.transcriptions.create(
             model="whisper-1",
-            file=("audio.m4a", audio_bytes)
+            file=(filename, audio_bytes),
+            language="en"  # Force English transcription
         )
         text = transcription.text
 
@@ -248,6 +275,9 @@ async def ingest(file: UploadFile = File(...)):
         )
 
     except Exception as e:
+        import traceback
+        print(f"ERROR IN INGEST: {str(e)}", flush=True)
+        print(traceback.format_exc(), flush=True)
         raise HTTPException(status_code=500, detail=f"Error processing audio: {str(e)}")
 
 @app.post("/search", response_model=SearchResponse)
