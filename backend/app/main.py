@@ -11,7 +11,7 @@ import os
 load_dotenv()
 
 from app.db import collection, embedding_fn
-from app.utils import parse_gpt_json, extract_structured_digest, extract_smartnotes, extract_flashcards
+from app.utils import parse_gpt_json, extract_structured_digest, extract_smartnotes, extract_flashcards, remove_repetitive_endings, remove_hallucinations
 from app.models import (
     IngestResponse, IngestResponseData, TranscriptData, DigestData, MemoryMetadata,
     Flashcard, FlashcardsData,
@@ -165,12 +165,18 @@ async def ingest(file: UploadFile = File(...)):
             print(f"Compressed audio from {original_size/(1024*1024):.1f}MB to {len(audio_bytes)/(1024*1024):.1f}MB", flush=True)
 
         # 1. Transcribe (force English to handle accented speakers)
+        # Use prompt to suppress common hallucinations
         transcription = client.audio.transcriptions.create(
             model="whisper-1",
             file=(filename, audio_bytes),
-            language="en"  # Force English transcription
+            language="en",  # Force English transcription
+            prompt="This is a university lecture recording. Transcribe only the actual spoken lecture content."
         )
         text = transcription.text
+
+        # Clean up hallucinations and repetitions
+        text = remove_hallucinations(text)
+        text = remove_repetitive_endings(text)
 
         # 2. Digest - improved prompt for clean JSON
         prompt = f"""
