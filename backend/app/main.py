@@ -139,31 +139,18 @@ async def ingest(file: UploadFile = File(...)):
     try:
         audio_bytes = await file.read()
 
-        # Check file size and compress if needed (Whisper has 25MB limit)
+        # Check file size (Whisper has 25MB limit)
         MAX_SIZE = 24 * 1024 * 1024  # 24MB to be safe
         filename = file.filename or "audio.m4a"
 
         if len(audio_bytes) > MAX_SIZE:
-            from pydub import AudioSegment
-            import io
-
-            original_size = len(audio_bytes)
-
-            # Load audio
-            audio = AudioSegment.from_file(io.BytesIO(audio_bytes))
-
-            # Compress: reduce to mono, lower bitrate
-            audio = audio.set_channels(1)  # Mono
-            audio = audio.set_frame_rate(16000)  # Lower sample rate (16kHz is good for speech)
-
-            # Export to compressed format
-            compressed_buffer = io.BytesIO()
-            audio.export(compressed_buffer, format="mp3", bitrate="32k")  # Very low bitrate for speech
-            compressed_buffer.seek(0)
-            audio_bytes = compressed_buffer.read()
-            filename = "compressed_audio.mp3"
-
-            print(f"Compressed audio from {original_size/(1024*1024):.1f}MB to {len(audio_bytes)/(1024*1024):.1f}MB", flush=True)
+            # Compression disabled due to Python 3.13 compatibility issues with pydub
+            # For validation phase, just reject large files
+            size_mb = len(audio_bytes) / (1024 * 1024)
+            raise HTTPException(
+                status_code=413,
+                detail=f"File too large ({size_mb:.1f}MB). Please upload files under 25MB (about 20-30 minutes of audio)."
+            )
 
         # 1. Transcribe (force English to handle accented speakers)
         # Use prompt to suppress common hallucinations
