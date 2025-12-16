@@ -28,7 +28,8 @@ function App() {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 20 * 60 * 1000); // 20 minutes
 
-      const res = await fetch("http://127.0.0.1:8000/ingest", {
+      const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
+      const res = await fetch(`${API_URL}/ingest`, {
         method: "POST",
         body: formData,
         signal: controller.signal
@@ -67,7 +68,8 @@ function App() {
     setSearchData(null);
 
     try {
-      const res = await fetch("http://127.0.0.1:8000/search", {
+      const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
+      const res = await fetch(`${API_URL}/search`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ query }),
