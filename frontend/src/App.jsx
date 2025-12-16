@@ -120,7 +120,8 @@ function App() {
         </button>
       </div>
 
-      <form className="search-box" onSubmit={handleSearch}>
+      {/* Search disabled in free tier deployment (ChromaDB too memory-heavy) */}
+      {/* <form className="search-box" onSubmit={handleSearch}>
         <input
           type="text"
           name="query"
@@ -130,7 +131,7 @@ function App() {
         <button type="submit" disabled={loading}>
           {loading ? "Searching..." : "Ask"}
         </button>
-      </form>
+      </form> */}
 
       {/* Error Display */}
       {error && (
