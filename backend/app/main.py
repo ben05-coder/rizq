@@ -10,7 +10,8 @@ import os
 # Load environment variables from .env file
 load_dotenv()
 
-from app.db import collection, embedding_fn
+# ChromaDB disabled for deployment (too memory-heavy for free tier)
+# from app.db import collection, embedding_fn
 from app.utils import parse_gpt_json, extract_structured_digest, extract_smartnotes, extract_flashcards, remove_repetitive_endings, remove_hallucinations
 from app.models import (
     IngestResponse, IngestResponseData, TranscriptData, DigestData, MemoryMetadata,
@@ -237,18 +238,19 @@ async def ingest(file: UploadFile = File(...)):
         memory_id = str(uuid.uuid4())
 
         # 4. Store in Chroma with metadata
-        embeddings = embedding_fn([text])
-        collection.add(
-            ids=[memory_id],
-            documents=[text + "\n\n" + digest_text],
-            embeddings=embeddings,
-            metadatas=[{
-                "timestamp": datetime.now().isoformat(),
-                "filename": file.filename,
-                "type": "audio_ingest",
-                "word_count": len(text.split())
-            }]
-        )
+        # DISABLED FOR DEPLOYMENT: ChromaDB uses too much memory for free tier
+        # embeddings = embedding_fn([text])
+        # collection.add(
+        #     ids=[memory_id],
+        #     documents=[text + "\n\n" + digest_text],
+        #     embeddings=embeddings,
+        #     metadatas=[{
+        #         "timestamp": datetime.now().isoformat(),
+        #         "filename": file.filename,
+        #         "type": "audio_ingest",
+        #         "word_count": len(text.split())
+        #     }]
+        # )
 
         # 5. Return structured response
         return IngestResponse(
@@ -288,6 +290,9 @@ async def ingest(file: UploadFile = File(...)):
 
 @app.post("/search", response_model=SearchResponse)
 async def search(req: dict):
+    # Search disabled in deployment (ChromaDB requires too much memory)
+    raise HTTPException(status_code=503, detail="Search feature temporarily disabled in free tier deployment")
+
     try:
         query = req.get("query", "")
 
@@ -295,10 +300,10 @@ async def search(req: dict):
             raise HTTPException(status_code=400, detail="Query cannot be empty")
 
         # Query ChromaDB for relevant documents
-        results = collection.query(
-            query_texts=[query],
-            n_results=3
-        )
+        # results = collection.query(
+        #     query_texts=[query],
+        #     n_results=3
+        # )
 
         matches = results["documents"][0] if results["documents"] else []
         ids = results["ids"][0] if results["ids"] else []
