@@ -104,13 +104,27 @@ function App() {
           id="fileInput"
           type="file"
           accept="audio/*"
-          onChange={(e) => setFile(e.target.files[0])}
+          onChange={(e) => {
+            // Only update file if user actually selected something (prevent cancel bug)
+            if (e.target.files[0]) {
+              setFile(e.target.files[0]);
+            }
+          }}
           style={{ display: "none" }}
         />
 
         <div
           className="upload-box"
-          onClick={() => document.getElementById("fileInput").click()}
+          onClick={() => {
+            // Don't allow file selection while processing
+            if (!loading) {
+              document.getElementById("fileInput").click();
+            }
+          }}
+          style={{
+            cursor: loading ? "not-allowed" : "pointer",
+            opacity: loading ? 0.6 : 1
+          }}
         >
           {file ? file.name : "Click to choose an audio file"}
         </div>
@@ -150,7 +164,18 @@ function App() {
       {/* Loading State */}
       {loading && (
         <div className="loading">
-          <div style={{ fontSize: "18px", marginBottom: "12px" }}>⏳ Processing your audio...</div>
+          <div className="loading-spinner" style={{
+            width: "60px",
+            height: "60px",
+            border: "6px solid #f3f3f3",
+            borderTop: "6px solid #3498db",
+            borderRadius: "50%",
+            animation: "spin 1s linear infinite",
+            margin: "0 auto 20px"
+          }}></div>
+          <div style={{ fontSize: "18px", marginBottom: "12px", fontWeight: "600" }}>
+            🎧 Processing your audio...
+          </div>
           <div style={{ fontSize: "14px", color: "#666", maxWidth: "500px", margin: "0 auto", lineHeight: "1.6" }}>
             {file && file.size > 5000000 && (
               <>
@@ -159,7 +184,11 @@ function App() {
               </>
             )}
             {(!file || file.size <= 5000000) && (
-              <>This usually takes 30-60 seconds...</>
+              <>
+                Transcribing → Generating flashcards → Almost done...
+                <br />
+                <span style={{ color: "#999", fontSize: "12px" }}>Usually takes 30-60 seconds</span>
+              </>
             )}
           </div>
         </div>
